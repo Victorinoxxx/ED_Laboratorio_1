@@ -1,2 +1,18 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+/*
+ * Display7Seg.h
+ *  Author: Victor Vanegas
+ */ 
+
+
+#ifndef Display7Seg_h_
+#define Display7Seg_h_
+#include <stdint.h>
+#include <avr/io.h>
+
+// Iniciar display
+void dis_init();
+
+// Mostrar un número en display
+void dis_num(uint8_t num);
+
+#endif
