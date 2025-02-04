@@ -1,2 +1,142 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+/*
+ * Laboratorio_1.c
+ * Author : Victor Vanegas
+ */ 
+
+#define F_CPU 16000000UL
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <util/delay.h>
+#include "Display7Seg/Display7Seg.h"
+
+#define SR PC4
+#define P1 PC5
+#define P2 PD7
+
+volatile uint8_t contador1 = 0;
+volatile uint8_t contador2 = 0;
+//*********************************************************************************
+// Prototipos de funcion
+//*********************************************************************************
+void initPorts(void);
+
+//*********************************************************************************
+// Codigo principal
+//*********************************************************************************
+int main(void)
+{
+	initPorts();
+	dis_num(0);
+	
+	while (1)
+	{
+	}
+}
+
+//*********************************************************************************
+// Sub Rutinas
+//*********************************************************************************
+// Inicio de carrera
+void init_carrera(){
+	cli();
+	contador1 = 1;
+	contador2 = 1;
+	PORTB = 0b00000001; // P1 = 1
+	PORTC = 0b01110001; // P2 = 1
+	for (int8_t i = 5; i >= 0; i--) {
+		dis_num(i);
+		_delay_ms(1000);
+	}
+	sei();
+}
+
+// Contadores
+void LedP1(void){
+	contador1 *= 2;
+	PORTB = contador1; // Enciende el LED correspondiente en PB0-PB3
+
+	// Si el contador llega a 4 (más de 3 LEDs), reiniciarlo a 0
+	if (contador1 >= 8) {
+		contador1 = 8;
+		dis_num(1);
+		PORTB = 0x0F;
+		PORTC = 0xF0;
+		
+	}
+}
+
+void LedP2(void){
+		switch(contador2){
+			case 2:
+				PORTC = 0b01110010;
+				break;
+			case 3:
+				PORTC = 0b01110100;
+				break;
+			case 4:
+				PORTC = 0b01111111;
+				PORTB = 0x00;
+				dis_num(2);
+				break;
+			default:
+				break;
+		}
+}
+
+// Puertos	
+void initPorts(void){
+	// Iniciar puertos	
+	
+	UCSR0B &= ~((1 << RXEN0) | (1 << TXEN0));  // Deshabilitar UART
+	// Puerto C como entrada y salida
+	DDRC = 0xFF;
+	DDRC &= ~(1<<SR)|(1<<P1);
+	// Poner los botones del puerto C como pullups y leds pagados
+	PORTC |= (1<<SR)|(1<<P1);
+	// Puerto D y B como salida y en D esta un boton
+	DDRD = 0b01111111;
+	DDRB = 0xFF;
+	// Poner los leds apagados y dejamos como pullup solo el boton
+	PORTD = 0b1000000;
+	PORTB = 0x00;
+	
+	// Habilitar interrupcion PCIE0 y PCIE2
+	PCICR |= (1<<PCIE1)|(1<<PCIE2);
+	// Seleccionamos el PB2 que sea la interrucion
+	PCMSK1 |= (1<<PCINT12)|(1<<PCINT13);
+	
+	// Seleccionamos el PB2 que sea la interrucion
+	PCMSK2 |= (1<<PCINT23);
+	
+	// Activar las interrupciones
+	sei();
+}
+
+//*********************************************************************************
+// ISR
+//*********************************************************************************
+ISR(PCINT1_vect){
+	if(PINC & (1<<SR)){
+		
+	}else{
+		init_carrera();
+	}
+	
+	if(PINC & (1<<P1)){
+		
+	}else{
+		LedP1();  // Actualizar los LEDs según el contador
+		_delay_ms(100);  // Anti-rebote
+	}
+}
+ISR(PCINT2_vect){
+	if(PIND & (1<<P2)){
+		
+	}else{
+		if(contador2 >= 1){
+		contador2++;
+		LedP2();
+		_delay_ms(100);
+		}
+	}
+}
